@@ -1,8 +1,8 @@
 const mysql = require('mysql');
 const { promisify } = require('util')
-const { database } = require('./keys');
+const { databaseOnline, databaseLocal } = require('./keys');
 
-const pool = mysql.createPool(database);
+const pool = mysql.createPool(databaseLocal);
 
 pool.getConnection((err, connection) => {
     if (err) {

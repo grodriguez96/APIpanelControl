@@ -37,31 +37,58 @@ router.post('/pie', async (req, res) => {
 /** Edit data of multiples pies*/
 router.put('/pie', async (req, res) => {
 
-    for (const pie of req.body) {
-        const newPie = {
-            variety: pie.variety,
-            price: parseFloat(pie.price)
-        };
-        const id = parseInt(pie.id);
-        await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
+    try {
+        for (const pie of req.body) {
+            const newPie = {
+                variety: pie.variety,
+                price: parseFloat(pie.price)
+            };
+            const id = parseInt(pie.id);
+            await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
+        }
 
+        res.status(200).send({ message: 'OK' })
+    } catch (error) {
+        switch (error.errno) {
+            case 1062: res.status(501).send({ message: 'Producto repetido' })
+                break;
+
+            default: res.status(500).send({ message: error.code })
+                break;
+        }
     }
 
-    res.send({ status: 200 });
+
 })
 
 /** Edit data of one pie */
 router.put('/pie/:id', async (req, res) => {
-    const { variety, price } = req.body;
-    const { id } = req.params;
 
-    const newPie = {
-        variety,
-        price
+    try {
+        const { variety, price } = req.body;
+        const { id } = req.params;
+
+        const newPie = {
+            variety,
+            price
+        }
+        const result = await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
+        console.log('this is result ->', result)
+        res.status(200).send({ message: 'OK' })
+
+
+    } catch (error) {
+        switch (error.errno) {
+            case 1062: res.status(501).send({ message: 'Producto repetido' })
+                break;
+
+            default: res.status(500).send({ message: error.code })
+                break;
+        }
     }
-    await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
 
-    res.send({ status: 200 });
+
+
 })
 
 /** Delete data of one pie */
