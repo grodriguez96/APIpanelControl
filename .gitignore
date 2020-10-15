@@ -45,4 +45,4 @@ testem.log
 Thumbs.db
 
 # Keys
-src/
+src/keys.js
