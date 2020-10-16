@@ -23,15 +23,26 @@ router.get('/pie/:id', async (req, res) => {
 /** Create one or multiples data */
 router.post('/pie', async (req, res) => {
 
-    for (const pie of req.body) {
-        const newPie = {
-            variety: pie.variety,
-            price: parseFloat(pie.price)
-        };
-        await pool.query('INSERT INTO pie (variety,price) VALUES (?,?)', [newPie.variety, newPie.price])
-    }
-    res.send({ status: 200 });
+    try {
+        for (const pie of req.body) {
+            const newPie = {
+                variety: pie.variety.toLowerCase(),
+                price: parseFloat(pie.price)
+            };
+            await pool.query('INSERT INTO pie (variety,price) VALUES (?,?)', [newPie.variety, newPie.price])
+        }
+        res.status(201).send({ message: 'Datos creados correctamente' })
 
+    } catch (error) {
+        console.log(error)
+        switch (error.errno) {
+            case 1062: res.status(501).send({ message: 'Producto repetido' })
+                break;
+
+            default: res.status(500).send({ message: error.code })
+                break;
+        }
+    }
 })
 
 /** Edit data of multiples pies*/
@@ -40,14 +51,14 @@ router.put('/pie', async (req, res) => {
     try {
         for (const pie of req.body) {
             const newPie = {
-                variety: pie.variety,
+                variety: pie.variety.toLowerCase(),
                 price: parseFloat(pie.price)
             };
             const id = parseInt(pie.id);
             await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
         }
 
-        res.status(200).send({ message: 'OK' })
+        res.status(200).send({ message: 'Datos modificados correctamente' })
     } catch (error) {
         switch (error.errno) {
             case 1062: res.status(501).send({ message: 'Producto repetido' })
@@ -57,8 +68,6 @@ router.put('/pie', async (req, res) => {
                 break;
         }
     }
-
-
 })
 
 /** Edit data of one pie */
@@ -69,12 +78,11 @@ router.put('/pie/:id', async (req, res) => {
         const { id } = req.params;
 
         const newPie = {
-            variety,
+            variety: variety.toLowerCase(),
             price
         }
-        const result = await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
-        console.log('this is result ->', result)
-        res.status(200).send({ message: 'OK' })
+        await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
+        res.status(200).send({ message: 'Dato modificado correctamente' })
 
 
     } catch (error) {
@@ -86,9 +94,6 @@ router.put('/pie/:id', async (req, res) => {
                 break;
         }
     }
-
-
-
 })
 
 /** Delete data of one pie */
