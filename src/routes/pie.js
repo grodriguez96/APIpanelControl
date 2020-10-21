@@ -8,20 +8,20 @@ router.use(bodyParser.json());
 const pool = require('../database');
 
 /** Get all data of pie column and returned*/
-router.get('/pie', async (req, res) => {
+router.get('/', async (req, res) => {
     const pie = await pool.query('SELECT * FROM pie');
     res.send(pie);
 })
 
 /** Get data of one pie and returned. IMPORTANT: NOT IMPLEMENTED YET */
-router.get('/pie/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const pie = await pool.query('SELECT * FROM pie WHERE id = ?', [id]);
     res.send(pie[0]);
 })
 
 /** Create one or multiples data */
-router.post('/pie', async (req, res) => {
+router.post('/', async (req, res) => {
 
     try {
         for (const pie of req.body) {
@@ -46,7 +46,7 @@ router.post('/pie', async (req, res) => {
 })
 
 /** Edit data of multiples pies*/
-router.put('/pie', async (req, res) => {
+router.put('/', async (req, res) => {
 
     try {
         for (const pie of req.body) {
@@ -71,7 +71,7 @@ router.put('/pie', async (req, res) => {
 })
 
 /** Edit data of one pie */
-router.put('/pie/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
 
     try {
         const { variety, price } = req.body;
@@ -97,22 +97,21 @@ router.put('/pie/:id', async (req, res) => {
 })
 
 /** Delete data of one pie */
-router.delete('/pie/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(id)
+router.delete('/:id', async (req, res) => {
 
-    await pool.query('DELETE FROM pie WHERE id = ?', [id]);
+    try {
 
-    const pie = await pool.query('SELECT * FROM pie');
-    res.send(pie);
-})
+        const { id } = req.params;
+        await pool.query('DELETE FROM pie WHERE id = ?', [id]);
+        res.status(200).send({ message: "Producto Eliminado correctamente" });
 
-/** Delete data of multiples pies. IMPORTANT: NOT IMPLEMENTED YET ! (Revision) */
-router.delete('/pie', async (req, res) => {
+    } catch (error) {
+        switch (error.errno) {
 
-    console.log(req.body)
-
-    res.send({ status: 200 });
+            default: res.status(500).send({ message: error.code })
+                break;
+        }
+    }
 })
 
 module.exports = router;

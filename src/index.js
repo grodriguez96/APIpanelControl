@@ -18,7 +18,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 /** Routes */
-app.use('/', require('./routes/pie'));
+app.use('/pie', require('./routes/pie'));
+app.use('/deletepies', require('./routes/deletePies'))
 
 /** Public (Not used yet)*/
 app.use(express.static(path.join(__dirname, 'public')));
