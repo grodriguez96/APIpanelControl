@@ -20,16 +20,22 @@ router.get('/:id', async (req, res) => {
 
 /** Create one or multiples data */
 router.post('/', async (req, res) => {
-
+    // esta es una función definida adentro de otra función =O
+    // nos permite separar la lógica en partes más pequeñas
+    const createPie = (pie) => {
+        const newPie = {
+            variety: pie.variety.toLowerCase(),
+            price: parseFloat(pie.price)
+        };
+        return pieDao.insert(newPie)
+    };
     try {
         // al usar map, voy a tener un array de promesas, que cuando se cumplan van a devolver los pies insertados
-        const promises = req.body.map(pie => {
-            const newPie = {
-                variety: pie.variety.toLowerCase(),
-                price: parseFloat(pie.price)
-            };
-            return pieDao.insert(newPie)
-        })
+        /* también podríamos escribir
+                const promises = req.body.map(pie => createPie(pie))
+            este es un "atajo"
+         */
+        const promises = req.body.map(createPie)
         // lo logueamos para ver entenderlo mejor
         console.log('promises', promises); // TODO
         const insertedPies = Promise.all(promises);
