@@ -22,14 +22,16 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
 
     try {
+        const pies = []
         for (const pie of req.body) {
             const newPie = {
                 variety: pie.variety.toLowerCase(),
                 price: parseFloat(pie.price)
             };
-            await pieDao.insert(newPie)
+            const insertedPie = await pieDao.insert(newPie);
+            pies.push(insertedPie);
         }
-        res.status(201).send({ message: 'Datos creados correctamente' })
+        res.status(201).send({ pies })
 
     } catch (error) {
         console.log(error)

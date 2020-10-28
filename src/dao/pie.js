@@ -1,7 +1,9 @@
 const pool = require('../database');
 
 export function insert(newPie) {
-    return pool.query('INSERT INTO pie (variety,price) VALUES (?,?)', [newPie.variety, newPie.price])
+    const result = pool.query('INSERT INTO pie (variety,price) VALUES (?,?)', [newPie.variety, newPie.price])
+    //puede fallar, no tengo mysql acá para probar
+    return {...newPie, id: result.insertId}
 }
 
 export async function getById(id) {
