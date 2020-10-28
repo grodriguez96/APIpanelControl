@@ -22,17 +22,21 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
 
     try {
-        const pies = []
-        for (const pie of req.body) {
+        // al usar map, voy a tener un array de promesas, que cuando se cumplan van a devolver los pies insertados
+        const promises = req.body.map(pie => {
             const newPie = {
                 variety: pie.variety.toLowerCase(),
                 price: parseFloat(pie.price)
             };
-            const insertedPie = await pieDao.insert(newPie);
-            pies.push(insertedPie);
-        }
-        res.status(201).send({ pies })
-
+            return pieDao.insert(newPie)
+        })
+        // lo logueamos para ver entenderlo mejor
+        console.log('promises', promises); // TODO
+        const insertedPies = Promise.all(promises);
+        console.log('insertedPies', insertedPies); // TODO
+        res.status(201).send(
+            {pies: insertedPies}
+        )
     } catch (error) {
         console.log(error)
         switch (error.errno) {
