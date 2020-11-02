@@ -1,7 +1,7 @@
+import * as pieDao from '../dao/pie'
 const express = require('express');
 const router = express.Router();
 var bodyParser = require('body-parser')
-
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
@@ -9,30 +9,40 @@ const pool = require('../database');
 
 /** Get all data of pie column and returned*/
 router.get('/', async (req, res) => {
-    const pie = await pool.query('SELECT * FROM pie');
-    res.send(pie);
+    res.send(await pieDao.getAll());
 })
 
 /** Get data of one pie and returned. IMPORTANT: NOT IMPLEMENTED YET */
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
-    const pie = await pool.query('SELECT * FROM pie WHERE id = ?', [id]);
-    res.send(pie[0]);
+    res.send(await pieDao.getById(id));
 })
 
 /** Create one or multiples data */
 router.post('/', async (req, res) => {
-
+    // esta es una función definida adentro de otra función =O
+    // nos permite separar la lógica en partes más pequeñas
+    const createPie = (pie) => {
+        const newPie = {
+            variety: pie.variety.toLowerCase(),
+            price: parseFloat(pie.price)
+        };
+        return pieDao.insert(newPie)
+    };
     try {
-        for (const pie of req.body) {
-            const newPie = {
-                variety: pie.variety.toLowerCase(),
-                price: parseFloat(pie.price)
-            };
-            await pool.query('INSERT INTO pie (variety,price) VALUES (?,?)', [newPie.variety, newPie.price])
-        }
-        res.status(201).send({ message: 'Datos creados correctamente' })
-
+        // al usar map, voy a tener un array de promesas, que cuando se cumplan van a devolver los pies insertados
+        /* también podríamos escribir
+                const promises = req.body.map(pie => createPie(pie))
+            este es un "atajo"
+         */
+        const promises = req.body.map(createPie)
+        // lo logueamos para ver entenderlo mejor
+        console.log('promises', promises); // TODO
+        const insertedPies = Promise.all(promises);
+        console.log('insertedPies', insertedPies); // TODO
+        res.status(201).send(
+            {pies: insertedPies}
+        )
     } catch (error) {
         console.log(error)
         switch (error.errno) {
