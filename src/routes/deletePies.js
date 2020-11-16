@@ -1,3 +1,5 @@
+import * as pieDao from '../dao/pie'
+import * as auxFunction from '../AuxFunctions/auxFunction'
 const express = require('express');
 const router = express.Router();
 var bodyParser = require('body-parser')
@@ -9,19 +11,22 @@ const pool = require('../database');
 
 router.put('/', async (req, res) => {
 
+    const deletePie = (pie) => {
+        const idNewPie = auxFunction.returnIdPie(pie)
+        pieDao.delet(idNewPie);
+    }
+
     try {
-        for (const pie of req.body) {
-            const id = parseInt(pie.id);
-            await pool.query('DELETE FROM pie WHERE id = ?', [id]);
-        }
 
-        res.status(200).send({ message: 'Datos eliminados correctamente' })
-    } catch (error) {
-        switch (error.errno) {
+        Promise.all(req.body.map(deletePie))
+            .then(() => {
+                res.status(200).send({ message: 'Datos eliminados correctamente' })
+            })
 
-            default: res.status(500).send(error.code)
-                break;
-        }
+
+    } catch (err) {
+
+        console.log(err)
     }
 })
 

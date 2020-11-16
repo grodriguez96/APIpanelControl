@@ -1,4 +1,5 @@
 import * as pieDao from '../dao/pie'
+import * as auxFunction from '../AuxFunctions/auxFunction'
 const express = require('express');
 const router = express.Router();
 var bodyParser = require('body-parser')
@@ -9,100 +10,99 @@ const pool = require('../database');
 
 /** Get all data of pie column and returned*/
 router.get('/', async (req, res) => {
-    res.send(await pieDao.getAll());
+    res.send(await pieDao.getAll())
 })
 
-/** Get data of one pie and returned. IMPORTANT: NOT IMPLEMENTED YET */
+/** Get data of one pie and returned. */
 router.get('/:id', async (req, res) => {
-    const { id } = req.params;
-    res.send(await pieDao.getById(id));
+    const { id } = req.params
+    res.send(await pieDao.getById(id))
 })
 
 /** Create one or multiples data */
 router.post('/', async (req, res) => {
-    // esta es una función definida adentro de otra función =O
-    // nos permite separar la lógica en partes más pequeñas
-    const createPie = (pie) => {
-        const newPie = {
-            variety: pie.variety.toLowerCase(),
-            price: parseFloat(pie.price)
-        };
-        return pieDao.insert(newPie)
-    };
-    try {
-        // al usar map, voy a tener un array de promesas, que cuando se cumplan van a devolver los pies insertados
-        /* también podríamos escribir
-                const promises = req.body.map(pie => createPie(pie))
-            este es un "atajo"
-         */
-        const promises = req.body.map(createPie)
-        // lo logueamos para ver entenderlo mejor
-        console.log('promises', promises); // TODO
-        const insertedPies = Promise.all(promises);
-        console.log('insertedPies', insertedPies); // TODO
-        res.status(201).send(
-            {pies: insertedPies}
-        )
-    } catch (error) {
-        console.log(error)
-        switch (error.errno) {
-            case 1062: res.status(501).send({ message: 'Producto repetido' })
-                break;
 
-            default: res.status(500).send({ message: error.code })
-                break;
-        }
+    /** Insert pie in the DB */
+    const createPie = (pie) => {
+        const newPie = auxFunction.convertPie(pie);
+        return pieDao.insert(newPie)
+    }
+
+    try {
+
+        const userPie = req.body.map(auxFunction.convertPie);
+        const bdPie = await pieDao.getAll();
+        const repeat = auxFunction.repeatPie(userPie, bdPie);
+
+
+        if (repeat.length === 0) { /** If repeat is empty, that means user pie does not exist in the DB */
+
+            /** When using map i will have an array of promises, which when they are fulfilled will return the inserted pies */
+
+            const promises = req.body.map(createPie)
+            const insertedPies = Promise.all(promises)
+            res.status(201).send({ pies: await insertedPies, message: "Los datos se han guardado satisfactoriamente" })
+
+        } else res.status(501).send({ pies: repeat, message: "Los siguientes datos ya se encuentran registrados en la base de datos" })
+
+    } catch (err) {
+        console.log(err)
     }
 })
 
 /** Edit data of multiples pies*/
 router.put('/', async (req, res) => {
 
+    /** Update pie in the DB */
+    const updatePies = (pie) => {
+        const newPie = auxFunction.convertPie(pie);
+        const idNewPie = auxFunction.returnIdPie(pie)
+        return pieDao.update(newPie, idNewPie)
+    }
+
     try {
-        for (const pie of req.body) {
-            const newPie = {
-                variety: pie.variety.toLowerCase(),
-                price: parseFloat(pie.price)
-            };
-            const id = parseInt(pie.id);
-            await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
+
+        const userPie = req.body.map(auxFunction.convertPie);
+        const bdPie = await pieDao.getAll();
+        const repeat = auxFunction.repeatPie(userPie, bdPie);
+
+        if (repeat.length === 0) {
+            const promises = req.body.map(updatePies);
+            const upPies = Promise.all(promises)
+            res.status(200).send({ pies: await upPies, message: "Los datos fueron modificados satisfactoriamente" })
+        } else {
+            res.status(501).send({ pies: repeat, message: "Los siguientes datos ya se encuentran registrados en la base de datos" })
         }
 
-        res.status(200).send({ message: 'Datos modificados correctamente' })
     } catch (error) {
-        switch (error.errno) {
-            case 1062: res.status(501).send({ message: 'Producto repetido' })
-                break;
-
-            default: res.status(500).send({ message: error.code })
-                break;
-        }
+        console.log(err)
     }
 })
 
 /** Edit data of one pie */
 router.put('/:id', async (req, res) => {
 
-    try {
-        const { variety, price } = req.body;
+    const updatePie = (pie) => {
         const { id } = req.params;
+        const newPie = auxFunction.convertPie(pie);
+        return pieDao.update(newPie, id)
+    }
 
-        const newPie = {
-            variety: variety.toLowerCase(),
-            price
+    try {
+
+        const userPie = auxFunction.convertPie(req.body);
+        const bdPie = await pieDao.getAll();
+        const auxBdPies = bdPie.map(auxFunction.returnVarietyPie);
+
+        if (!auxBdPies.includes(userPie.variety)) {
+            const promise = updatePie(req.body);
+            res.status(200).send({ pie: await promise, message: "El dato se modifico exitosamente" })
+        } else {
+            res.status(501).send({ pie: userPie, message: "El dato al que intenta cambiar ya se encuentra registrado en la base de datos" })
         }
-        await pool.query('UPDATE pie set ? WHERE id = ?', [newPie, id]);
-        res.status(200).send({ message: 'Dato modificado correctamente' })
 
-
-    } catch (error) {
-        switch (error.errno) {
-            case 1062: res.status(501).send({ message: 'Producto repetido' })
-                break;
-
-            default: res.status(500).send({ message: error.code })
-                break;
-        }
+    } catch (err) {
+        console.log(err)
     }
 })
 
@@ -112,15 +112,14 @@ router.delete('/:id', async (req, res) => {
     try {
 
         const { id } = req.params;
-        await pool.query('DELETE FROM pie WHERE id = ?', [id]);
-        res.status(200).send({ message: "Producto Eliminado correctamente" });
+        await pieDao.delet(id)
+            .then(() => {
+                res.status(200).send({ message: "Dato eliminado correctamente" });
+            })
 
-    } catch (error) {
-        switch (error.errno) {
 
-            default: res.status(500).send({ message: error.code })
-                break;
-        }
+    } catch (err) {
+        console.log(err)
     }
 })
 
